@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: barbershop_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: barbershop_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d barbershop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: barbershop_backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/barbershop_db
+      JWT_SECRET: super-secret-jwt-key
+      JWT_EXPIRES_IN: 7d
+      PORT: 3000
+    ports:
+      - '3000:3000'
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/masters || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    build: ./frontend
+    container_name: barbershop_frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '5173:80'
+    restart: on-failure
+
+volumes:
+  pgdata:
