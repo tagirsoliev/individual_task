@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  phone     String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(CLIENT)
+  createdAt DateTime @default(now())
+
+  bookings  Booking[]
+}
+
+model Master {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  specialty String
+  createdAt DateTime @default(now())
+
+  bookings  Booking[]
+}
+
+model Booking {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  masterId    Int
+  bookingDate DateTime
+  status      BookingStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  master Master @relation(fields: [masterId], references: [id])
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+enum BookingStatus {
+  NEW
+  CONFIRMED
+  REJECTED
+}
